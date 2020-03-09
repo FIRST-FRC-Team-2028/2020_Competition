@@ -228,6 +228,7 @@ public class Robot extends TimedRobot {
 
       @Override
       public void teleopPeriodic() {
+            zeroHoodPosition();
 
 //             for (int i = 0; i < packet1.length; i++) {
 //                   packet1[i] = null;
@@ -264,22 +265,6 @@ public class Robot extends TimedRobot {
 
 //             }
 
- // Start up Begin
-
-   while (startUp){
-
-      while(forwardLimit_hood.get() == false) {  hoodMotor.set(0.2);  }
-      hoodMotor.set(0.0);
-      hood_Encoder.setPosition(0);
-      turret_Encoder.setPosition(0.0);                                    ///FIXME
-      hoodMotor.setSoftLimit(SoftLimitDirection.kForward, 0.0f);
-      hoodMotor.setSoftLimit(SoftLimitDirection.kReverse, -43.0f);
-      hoodMotor.enableSoftLimit(SoftLimitDirection.kReverse, true);
-      hoodMotor.enableSoftLimit(SoftLimitDirection.kForward, true);
-      startUp = false;
-   }
-
-// Start up End
             Drive();
 
             if (Pilot_Stick.getRawButton(Parameters.PILOT_BUTTON_1)){
@@ -376,14 +361,21 @@ if (Co_Pilot_Stick2.getRawButton(Parameters.COPILOT2_CLIMB) == true) {
 
 //SmartDashboard.putNumber("hood position", hood_Encoder.getPosition());
 
-            if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_HOOD_CLOSE) == true)  { hoodPosition = -17;
-                                                                                         shooterSpeed = 5500;  }
-            if (Co_Pilot_Stick2.getRawButton(Parameters.COPILOT2_HOOD_MEDIUM) == true) { hoodPosition = -20; 
-                                                                                         shooterSpeed = 5500;  }                
-            if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_HOOD_FAR) == true)    { hoodPosition = -23;
-                                                                                         shooterSpeed = 5500;  }    
-             hood_Controller.setReference(hoodPosition, ControlType.kPosition);
-
+            if (!startUp) {
+                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_HOOD_CLOSE) == true)  { 
+                        hoodPosition = -17;
+                        shooterSpeed = 5500; 
+                  }
+                  if (Co_Pilot_Stick2.getRawButton(Parameters.COPILOT2_HOOD_MEDIUM) == true) { 
+                        hoodPosition = -20; 
+                        shooterSpeed = 5500;
+                  }                
+                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_HOOD_FAR) == true) { 
+                        hoodPosition = -23;
+                        shooterSpeed = 5500;  
+                  }    
+                  hood_Controller.setReference(hoodPosition, ControlType.kPosition);
+            }
              if (Pilot_Stick.getRawButton(Parameters.PILOT_BUTTON_2) == true)  {
                  double Pixy_Avg_Volt =  Pixy_Forward_Input.getAverageVoltage(); 
                  if ((Pixy_Avg_Volt > .15) && (Pixy_Avg_Volt < 3.0)) { 
@@ -435,15 +427,38 @@ if (Co_Pilot_Stick2.getRawButton(8) == true) {    // Green Button
 
          @Override
   public void autonomousInit() {
-
       hoodPosition = -14;
       shooterSpeed = 5500;
       hoodZero = false;
       startUp = true;
+  }
 
-      while (startUp){
+  /**
+   * This function is called periodically during autonomous.
+   */
+  @Override
+  public void autonomousPeriodic() {
+      zeroHoodPosition();
 
-            while(forwardLimit_hood.get() == false) {  hoodMotor.set(0.2);  }
+   if (!startUp) {
+      // Figure out what autonomous code to run and invoke it
+      autonomousShootBackupTurnAround();
+   }
+
+  }
+
+  private void zeroHoodPosition() {
+ // Start up Begin
+
+ /**
+  * 
+  */
+ if (startUp) {
+
+      if (forwardLimit_hood.get() == false) {  
+            hoodMotor.set(0.2);  
+      }
+      else {
             hoodMotor.set(0.0);
             hood_Encoder.setPosition(0);
             turret_Encoder.setPosition(0.0);                                    ///FIXME
@@ -452,66 +467,55 @@ if (Co_Pilot_Stick2.getRawButton(8) == true) {    // Green Button
             hoodMotor.enableSoftLimit(SoftLimitDirection.kReverse, true);
             hoodMotor.enableSoftLimit(SoftLimitDirection.kForward, true);
             startUp = false;
-         }
-
-        hood_Controller.setReference(hoodPosition, ControlType.kPosition);
-        timer.reset();
-        timer.start();
-
-        shooterController.setReference(shooterSpeed, ControlType.kVelocity); 
-       
-        timer.delay(2.0);               // Start shooter
-
-        acceleratorMotor.set(-0.7);
-        magazineMotor.set(0.8);
-        timer.delay(5.0);
-
-        acceleratorMotor.set(0.0);      //  Shut down shooting
-        magazineMotor.set(0.0);
-        shooterController.setReference(0, ControlType.kVelocity);
-
-        rightMotor.set(.3);      // Back up
-        leftMotor.set(-.3);      //
-        timer.delay(1.5);        // 
-
-        rightMotor.set(.2);      // Tu;rn ~ 180
-        leftMotor.set(.2);       //
-        timer.delay(2.2);        //
-
-        rightMotor.set(0.0);     // All stop
-        leftMotor.set(0.0);      //
-
-        DriveAdjust = follow_Ball_Controller.calculate(Pixy_Forward_Input.getAverageVoltage(), 3.3/2.0); 
-        rightMotor.set(-.2-DriveAdjust);     //  Drive forward
-        leftMotor.set(.2-DriveAdjust);       //
-        timer.delay(1.0);                   //
-
-        DriveAdjust = follow_Ball_Controller.calculate(Pixy_Forward_Input.getAverageVoltage(), 3.3/2.0); 
-        rightMotor.set(-.2-DriveAdjust);     //  Drive forward
-        leftMotor.set(.2-DriveAdjust);       //
-        timer.delay(1.0);  
-
-        DriveAdjust = follow_Ball_Controller.calculate(Pixy_Forward_Input.getAverageVoltage(), 3.3/2.0); 
-        rightMotor.set(-.2-DriveAdjust);     //  Drive forward
-        leftMotor.set(.2-DriveAdjust);       //
-        timer.delay(1.0);  
-
-        rightMotor.set(0.0);     // All stop
-        leftMotor.set(0.0);      //
-
-
+            hoodZero = true;
+      }      
+   }
+      // Start up End        
   }
 
-  /**
-   * This function is called periodically during autonomous.
-   */
-  @Override
-  public void autonomousPeriodic() {
+  private void autonomousShootBackupTurnAround() {
+      double matchTime = 15.0 - DriverStation.getInstance().getMatchTime();
 
-
-
+      if (matchTime <= 2.0) {
+            // Turn on shooter and wait for it to come up to speed for 2 seconds
+            hood_Controller.setReference(hoodPosition, ControlType.kPosition);
+            shooterController.setReference(shooterSpeed, ControlType.kVelocity); 
+      }
+      else if (matchTime <= 7.0) {
+            // Shoot for 5 seconds
+            acceleratorMotor.set(-0.7);
+            magazineMotor.set(0.8);
+      }
+      else if (matchTime <= 8.5) {
+            // Backup for 1.5 seconds
+            acceleratorMotor.set(0.0);      //  Shut down shooting
+            magazineMotor.set(0.0);
+            shooterController.setReference(0, ControlType.kVelocity);
+            rightMotor.set(.3);      // Back up
+            leftMotor.set(-.3);      //
+      }
+      else if (matchTime <= 10.7) {
+            // Turn around approx. 180
+            rightMotor.set(.2);      // Tu;rn ~ 180
+            leftMotor.set(.2);       //
+      }
+      else if (matchTime <= 11.00) {
+            // All stop
+            rightMotor.set(0.0);     // All stop
+            leftMotor.set(0.0);      //
+            // Turn on magazine
+            // Deploy & turn on Pickup
+      }
+      else if (matchTime <= 14.0) {
+            // Follow ball
+            DriveAdjust = follow_Ball_Controller.calculate(Pixy_Forward_Input.getAverageVoltage(), 3.3/2.0); 
+            rightMotor.set(-.2-DriveAdjust);     //  Drive forward
+            leftMotor.set(.2-DriveAdjust);       //
+      } else {
+            // All stop
+            rightMotor.set(0.0);     // All stop
+            leftMotor.set(0.0);      //        
+      }
   }
-
-
 
 }
