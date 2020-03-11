@@ -82,7 +82,7 @@ public final class Parameters {
         CLIMB_RIGHT          (50, true, false),
         CLIMB_LEFT           (51, false, false),
 
-        CONTROL_PANEL        (60, false, false), 
+        CONTROL_PANEL        (60, true, false), //set climber motor inverted
 
         SPARE                (28, false, false);
 
