@@ -32,6 +32,7 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.AnalogOutput;
@@ -70,6 +71,7 @@ public class Robot extends TimedRobot {
 
       private Compressor airCompressor;
       private DoubleSolenoid gearShift, pickupShift;
+      private Solenoid climberRelease;
 
       private CANEncoder m_encoder_left, m_encoder_right;
 
@@ -82,7 +84,7 @@ public class Robot extends TimedRobot {
 
       private int counter, hoodPosition, shooterSpeed;
 
-      private boolean hoodZero, startUp;
+      private boolean hoodZero, startUp, endgameActive, climberActive, turretZero, climberReleased;
 
       private Timer timer;
 
@@ -99,9 +101,15 @@ public class Robot extends TimedRobot {
       @Override
       public void robotInit() {
 
+            //added climber booleans after Richmond
+            endgameActive = false;
+            climberActive = false;
+            climberReleased = false;
+
             hoodPosition = -17;
             shooterSpeed = 5500;
             hoodZero = false;
+            turretZero = false; // added after Richmond, zero position must be set before each match
             startUp = true;
             DriveAdjust = 0.0;
 
@@ -155,11 +163,13 @@ public class Robot extends TimedRobot {
             turretMotor.setSoftLimit(SoftLimitDirection.kReverse, -300.0f); // was -150
             turretMotor.enableSoftLimit(SoftLimitDirection.kReverse, true);
             turretMotor.enableSoftLimit(SoftLimitDirection.kForward, true);
+            turretMotor.setIdleMode(IdleMode.kBrake); //added after Richmond
 
             hoodMotor = new CANSparkMax(Parameters.CANIDs.TURRET_HOOD.getid(), MotorType.kBrushless);
             hoodMotor.restoreFactoryDefaults();
             hood_Encoder = hoodMotor.getEncoder();
             hood_Controller = hoodMotor.getPIDController();
+            //hoodMotor.setIdleMode(IdleMode.kBrake);
 
             kP = 0.025;
             kI = 1e-5;
@@ -200,6 +210,7 @@ public class Robot extends TimedRobot {
             airCompressor = new Compressor(0);
             gearShift = new DoubleSolenoid(0, 1);
             pickupShift = new DoubleSolenoid(2, 3);
+            climberRelease = new Solenoid(4);
 
             Pixy_Turret = new AnalogInput(2);
             Pixy_Forward_Input = new AnalogInput(3);
@@ -222,12 +233,11 @@ public class Robot extends TimedRobot {
             m_gyro.reset();
 
             timer = new Timer();
-
       }
 
       @Override
       public void teleopPeriodic() {
-            zeroHoodPosition();
+            zeroHoodPosition(); //added after Richmond
 
             // for (int i = 0; i < packet1.length; i++) {
             // packet1[i] = null;
@@ -293,7 +303,7 @@ public class Robot extends TimedRobot {
 
             // Magazine Commands
 
-            if (Co_Pilot_Stick2.getRawButton(Parameters.COPILOT2_CLIMB) == true) {
+            if (Co_Pilot_Stick2.getRawButton(Parameters.COPILOT2_TURBO) == true) {
                   magazine_speed = 0.4;
             } else {
                   magazine_speed = 0.0;
@@ -319,33 +329,37 @@ public class Robot extends TimedRobot {
             // }
 
             // Turret Commands
-            if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_TURRET_FINE_ADJUST) == true) {
-                  turret_speed = 0.03;
-            } else {
-                  turret_speed = 0.25;
-            }
 
-            if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_JOYSTICK_TURRET_LEFT) == true) {
-                  turretMotor.set(turret_speed);
-            } else {
-                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_JOYSTICK_TURRET_RIGHT) == true) {
-                        turretMotor.set(-turret_speed);
-                  } else
-                        turretMotor.set(0.0);
-            }
+            //changed after Richmond (once climberActive is true, the turret can only be zeroed)
+            if (!climberActive) {
+                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_TURRET_FINE_ADJUST) == true) {
+                        turret_speed = 0.03;
+                  } else {
+                        turret_speed = 0.25;
+                  }
 
-            if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_FIND_TARGET) == true) {
-                  double drivePower = Pixy_Turret_Controller.calculate(Pixy_Turret.getAverageVoltage(),
-                              (3.3 / 2.0d) + .1); // Fix me 139????
-                  // SmartDashboard.putNumber("Turret Pixy", Pixy_Turret.getAverageVoltage());
-                  // System.out.println(drivePower);
-                  turretMotor.set(drivePower);
+                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_JOYSTICK_TURRET_LEFT) == true) {
+                        turretMotor.set(turret_speed);
+                  } else {
+                        if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_JOYSTICK_TURRET_RIGHT) == true) {
+                              turretMotor.set(-turret_speed);
+                        } else
+                              turretMotor.set(0.0);
+                  }
+
+                  if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_FIND_TARGET) == true) {
+                        double drivePower = Pixy_Turret_Controller.calculate(Pixy_Turret.getAverageVoltage(),
+                                    (3.3 / 2.0d) + .1); // Fix me 139????
+                        // SmartDashboard.putNumber("Turret Pixy", Pixy_Turret.getAverageVoltage());
+                        // System.out.println(drivePower);
+                        turretMotor.set(drivePower);
+                  }
             }
             // else
             // if (Math.abs(drivePower) < .1)
             // turretMotor.set(0.0);
 
-            // Shooter Coommands
+            // Shooter Commands
 
             if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_SHOOT) == true) {
                   shooterController.setReference(shooterSpeed, ControlType.kVelocity);
@@ -359,6 +373,7 @@ public class Robot extends TimedRobot {
 
             // SmartDashboard.putNumber("hood position", hood_Encoder.getPosition());
 
+            //changed after Richmond (addition of !startUp)
             if (!startUp) {
                   if (Co_Pilot_Stick1.getRawButton(Parameters.COPILOT1_HOOD_CLOSE) == true) {
                         hoodPosition = -17;
@@ -386,13 +401,57 @@ public class Robot extends TimedRobot {
             }
 
             // Climber Commands
+          
 
-            if (Co_Pilot_Stick2.getRawButton(8) == true) { // Green Button
-                  climberMotor.set(0.4);
-            } else {
-                  climberMotor.set(0.0);
+            //if (Co_Pilot_Stick2.getRawButton(8) == true) { // Green Button
+            //      climberMotor.set(0.4);
+            //} else {
+            //      climberMotor.set(0.0);
+            //}
+
+            //section added after Richmond
+            if (DriverStation.getInstance().getMatchTime() < 30.0 ) {
+                  endgameActive = true; //last 30 seconds of teleop is endgame, matchTime counts down each period
             }
+            if(Pilot_Stick.getRawButton(Parameters.PILOT_CLIMB_DEPLOY) && (endgameActive)) {
+                  climberActive = true;
+                  if (!turretZero) {
+                        double turretHoming = Pixy_Turret_Controller.calculate(turret_Encoder.getPosition(),
+                              (0.0));
+                        turretMotor.set(turretHoming);
+                  }
 
+                  if((Math.abs(turret_Encoder.getPosition()) < Parameters.CLIMBER_TURRET_POS_WINDOW) 
+                        && (Math.abs(turretMotor.get()) < Parameters.CLIMBER_TURRET_SPEED_WINDOW)) {
+
+                        timer.start();
+                        if((Math.abs(turret_Encoder.getPosition()) >= Parameters.CLIMBER_TURRET_POS_WINDOW) 
+                              || (Math.abs(turretMotor.get()) >= Parameters.CLIMBER_TURRET_SPEED_WINDOW)) {
+
+                              timer.stop();
+                              timer.reset();
+                        } 
+                        if (timer.get() > 0.3) {
+                              turretZero = true;
+                        }
+                  }
+
+                  if(turretZero) {
+                        turretMotor.set(0.0);
+                        climberRelease.set(true);
+                        climberReleased = true;
+                  }
+            } else {
+                  climberRelease.set(false);
+            }
+            if(!Pilot_Stick.getRawButton(Parameters.PILOT_CLIMB_DEPLOY) && (climberActive)) {
+                  turretMotor.set(0.0); //stop turret if driver releases button
+            }
+            
+
+            if(Pilot_Stick.getRawButton(Parameters.PILOT_CLIMB) && climberReleased) {
+                  climberMotor.set(Parameters.CLIMBER_REEL_SPEED); //reel in winch and climb to victory
+            }
       }
 
       public void Drive() {
@@ -421,6 +480,7 @@ public class Robot extends TimedRobot {
             shooterSpeed = 5500;
             hoodZero = false;
             startUp = true;
+            //changed after Richmond (autonomous code moved to periodic)
       }
 
       /**
@@ -428,6 +488,9 @@ public class Robot extends TimedRobot {
        */
       @Override
       public void autonomousPeriodic() {
+            //climberMotor.set(-0.3);
+            //timer.delay(0.2);
+            // climberMotor.set(0.0);
             zeroHoodPosition();
 
             if (!startUp) {
@@ -436,6 +499,7 @@ public class Robot extends TimedRobot {
             }
       }
 
+      //added after Richmond (became a method and changed to ifs)
       private void zeroHoodPosition() {
             // Start up Begin
 
@@ -449,7 +513,7 @@ public class Robot extends TimedRobot {
                   } else {
                         hoodMotor.set(0.0);
                         hood_Encoder.setPosition(0);
-                        turret_Encoder.setPosition(0.0); /// FIXME
+                        //turret_Encoder.setPosition(0.0); /// FIXME sets Solomon's adjustment of direction motor to zero
                         hoodMotor.setSoftLimit(SoftLimitDirection.kForward, 0.0f);
                         hoodMotor.setSoftLimit(SoftLimitDirection.kReverse, -43.0f);
                         hoodMotor.enableSoftLimit(SoftLimitDirection.kReverse, true);
@@ -461,6 +525,7 @@ public class Robot extends TimedRobot {
             // Start up End
       }
 
+      //added after Richmond (became a method and used matchTime instead of timer)
       private void autonomousShootBackupTurnAround() {
             double matchTime = 15.0 - DriverStation.getInstance().getMatchTime();
 

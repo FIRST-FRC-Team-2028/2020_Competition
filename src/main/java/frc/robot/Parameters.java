@@ -50,8 +50,9 @@ public final class Parameters {
         DRIVE_HIGH_GEAR(1),
         PICKUP_RETRACT(2),
         PICKUP_EXTEND(3),
-        OPEN_ACCELERATOR_FLAPS(4),
-        CLOSE_ACCELERATOR_FLAPS(5);
+        //OPEN_ACCELERATOR_FLAPS(4),
+        //CLOSE_ACCELERATOR_FLAPS(5);
+        CLIMBER_RELEASE(4);
         private final int channel;
         private PneumaticChannel(final int ch) {
             channel = ch;
@@ -79,10 +80,10 @@ public final class Parameters {
         MAGAZINE             (41, false, false),
         ACCELERATOR          (42, false, false), 
 
-        CLIMB_RIGHT          (50, true, false),
-        CLIMB_LEFT           (51, false, false),
+        //CLIMB_RIGHT          (50, true, false),
+        //CLIMB_LEFT           (51, false, false),
 
-        CONTROL_PANEL        (60, true, false), //set climber motor inverted
+        CLIMBER_WINCH        (60, false, false), //was Control Panel
 
         SPARE                (28, false, false);
 
@@ -247,7 +248,10 @@ public final class Parameters {
      //used for climber currently not being used
      public static final int SOLENOID_EXTEND = 1;
      public static final int SOLENOID_RETRACT = 2;
-     public static final double CLIMBER_REEL_SPEED = 1.0;
+     public static final double CLIMBER_TURRET_POS_WINDOW = 3.0;
+     public static final double CLIMBER_TURRET_SPEED_WINDOW = 0.2;
+     public static final double CLIMBER_REEL_SPEED = 0.3;
+     
 
      // public static final double PICKUP_TIME = 0.5;
      public static final double EXTEND_TIME = 0.5;
@@ -351,8 +355,8 @@ public final class Parameters {
     public static final int Pilot_Button_6    =  6;
     public static final int PILOT_BUTTON_7    =  7;
     public static final int PILOT_BUTTON_8    =  8;
-    public static final int PILOT_BUTTON_9    =  9;
-    public static final int PILOT_BUTTON_10   = 10;
+    public static final int PILOT_CLIMB_DEPLOY    =  9;
+    public static final int PILOT_CLIMB   = 10;
     public static final int PILOT_BUTTON_11   = 11;
 
     public static final int COPILOT1  =  3;
@@ -370,7 +374,7 @@ public final class Parameters {
     public static final int COPILOT2             =  4;
     public static final int COPILOT2_HOOD_MEDIUM =  1;      // Button 11
     public static final int COPILOT2_MAGAZINE_UP =  2;      // Button 12
-    public static final int COPILOT2_CLIMB       =  3;      // Button 13
+    public static final int COPILOT2_TURBO       =  3;      // Button 13
     public static final int COPILOT2_CAMERA      =  4;      // Button 14
     public static final int COPILOT2_PICKUP_REV  =  5;
     public static final int COPILOT2_BUTTON_6    =  6;
